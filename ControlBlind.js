@@ -11,21 +11,25 @@ module.exports = function (RED) {
     });
 
     sendData = function (data) {
-        //console.log("send：" + data);
         server.client.send(data, 32100, '238.0.0.18', function (error) {
-            console.log("potential error", error);
+            console.log('potential error', error);
             if (error) {
-                console.log("send failed:" + error);
+                console.log('send failed:' + error);
             }
-        })
-    }
+        });
+    };
 
-    controlDevice = function (operation, targetPosition, mac, deviceType, nodeID) {
-        // console.log("controlDevice", operation, targetPosition, mac, deviceType, server);
+    controlDevice = function (
+        operation,
+        targetPosition,
+        mac,
+        deviceType,
+        nodeID
+    ) {
         let sendData_obj;
         if (operation !== undefined) {
             sendData_obj = {
-                msgType: "WriteDevice",
+                msgType: 'WriteDevice',
                 mac: mac,
                 deviceType: deviceType,
                 AccessToken: acc.generateAcc(server.token, server.key),
@@ -33,11 +37,10 @@ module.exports = function (RED) {
                 data: {
                     operation: operation
                 }
-            }
-        }
-        else if (targetPosition != undefined) {
+            };
+        } else if (targetPosition != undefined) {
             sendData_obj = {
-                msgType: "WriteDevice",
+                msgType: 'WriteDevice',
                 mac: mac,
                 deviceType: deviceType,
                 AccessToken: acc.generateAcc(server.token, server.key),
@@ -45,24 +48,27 @@ module.exports = function (RED) {
                 data: {
                     targetPosition: targetPosition
                 }
-            }
+            };
         }
-        sendData(JSON.stringify(sendData_obj));
-        // setTimeout(() => { sendData(JSON.stringify(sendData_obj)) }, 200);
-    }
 
-    function ControlBlindNode(config) {
+        sendData(JSON.stringify(sendData_obj));
+    };
+
+    function ControlBlindNode (config) {
         RED.nodes.createNode(this, config);
 
-        let nodeID = uuid.generateUUID().substring(0, 6);
+        var messageBinded = false;
+        var nodeID = uuid.generateUUID().substring(0, 6);
+        console.log('NodeId: ', nodeID);
         let lastMsgID;
 
         // Retrieve the config node
         server = RED.nodes.getNode(config.server);
-        // console.log("got server", RED.nodes.getNode(config.server), config);
         if (!server) {
             // No config node configured
-            this.error("Control Blinds - No API connection was configured. Please add a Connection to this node.");
+            this.error(
+                'Control Blinds - No API connection was configured. Please add a Connection to this node.'
+            );
         }
 
         var node = this;
@@ -71,52 +77,52 @@ module.exports = function (RED) {
             let TempTargetPosition;
             if (msg.payload.siro && msg.payload.siro.operation) {
                 switch (msg.payload.siro.operation.toUpperCase()) {
-                    case "DOWN":
+                    case 'DOWN':
                         operation = 0;
                         break;
-                    case "UP":
+                    case 'UP':
                         operation = 1;
                         break;
-                    case "STOP":
+                    case 'STOP':
                         operation = 2;
                         break;
-                    case "CHANGE_DIRECTION":
+                    case 'CHANGE_DIRECTION':
                         operation = 3;
                         break;
-                    case "SET_LIMIT":
-                        operation = "4";
+                    case 'SET_LIMIT':
+                        operation = '4';
                         break;
-                    case "STATUS":
-                        operation = "5";
+                    case 'STATUS':
+                        operation = '5';
                         break;
-                    case "BATTERY":
+                    case 'BATTERY':
                         operation = 6;
                         break;
-                    case "STEP_UP":
+                    case 'STEP_UP':
                         operation = 7;
                         break;
-                    case "STEP_DOWN":
+                    case 'STEP_DOWN':
                         operation = 8;
                         break;
-                    case "SAVE_END_UP":
+                    case 'SAVE_END_UP':
                         operation = 9;
                         break;
-                    case "SAVE_END_DOWN":
+                    case 'SAVE_END_DOWN':
                         operation = 10;
                         break;
-                    case "SAVE_FAV":
+                    case 'SAVE_FAV':
                         operation = 11;
                         break;
-                    case "GO_TO_FAV":
+                    case 'GO_TO_FAV':
                         operation = 12;
                         break;
-                    case "SET_END_UP":
+                    case 'SET_END_UP':
                         operation = 13;
                         break;
-                    case "SET_END_DOWN":
+                    case 'SET_END_DOWN':
                         operation = 14;
                         break;
-                    case "TARGET_POSITION":
+                    case 'TARGET_POSITION':
                         operation = 5;
                         TempTargetPosition = msg.payload.siro.targetPosition;
                         break;
@@ -133,21 +139,40 @@ module.exports = function (RED) {
             if (TempTargetPosition != undefined) {
                 operation = undefined;
             }
-            controlDevice(operation, TempTargetPosition, device.mac, device.type, nodeID);
+            controlDevice(
+                operation,
+                TempTargetPosition,
+                device.mac,
+                device.type,
+                nodeID
+            );
         });
 
-        server.client.on('message', (msg, rinfo) => {
+        var messageListener = (msg, rinfo) => {
             let obj = JSON.parse(msg.toString());
             let device = JSON.parse(config.device);
-            if (obj.msgType === "WriteDeviceAck"
-                && obj.mac == device.mac
-                && obj.msgID
-                && obj.msgID.endsWith(nodeID)
-                && (!lastMsgID || lastMsgID < obj.msgID)) {
+
+            if (
+                obj.msgType === 'WriteDeviceAck' &&
+                obj.mac == device.mac &&
+                (!lastMsgID || lastMsgID < obj.msgID)
+            ) {
                 lastMsgID = obj.msgID;
                 node.send(obj);
             }
+        };
+
+        if (!messageBinded) {
+            server.client.on('message', messageListener);
+            messageBinded = true;
+        }
+
+        node.on('close', function (done) {
+            server.client.removeListener('message', messageListener);
+            done();
         });
+
+        console.log(server.client, messageBinded);
     }
-    RED.nodes.registerType("Control-Blind", ControlBlindNode);
-}
+    RED.nodes.registerType('Control-Blind', ControlBlindNode);
+};
