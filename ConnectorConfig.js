@@ -61,7 +61,7 @@ module.exports = function (RED) {
             if(obj && obj.token && !this.token) {
                 this.token = obj.token;
             }
-            console.log("new incoming message", obj, rinfo);
+            NodeRed.log("new incoming message", obj, rinfo);
         });
     }
     RED.nodes.registerType("connector-api-config", ConnectorConfigNode);
