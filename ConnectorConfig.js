@@ -5,12 +5,12 @@ module.exports = function (RED) {
     const dgram = require('dgram');
 
     let key = "";
-    var token;
+    let token;
 
-    var schedule = require('node-schedule');
+    let schedule = require('node-schedule');
     let connected = null;
-    var AccessToken;
-    var RefreshToken;
+    let AccessToken;
+    let RefreshToken;
     let SheduleToken;
     let ApiURL;
     let NodeRed;
@@ -26,10 +26,8 @@ module.exports = function (RED) {
         ApiURL = this.host + ':' + this.port;
         this.user = n.user;
         this.pw = n.pw;
-        login().then((token) => {
-            this.AccessToken = token;
-        });
         this.AccessToken = '';
+        login();
       
         client = dgram.createSocket('udp4');
 
@@ -63,7 +61,7 @@ module.exports = function (RED) {
             if(obj && obj.token && !this.token) {
                 this.token = obj.token;
             }
-            //console.log("new incoming message", obj, rinfo);
+            console.log("new incoming message", obj, rinfo);
         });
     }
     RED.nodes.registerType("connector-api-config", ConnectorConfigNode);
@@ -90,9 +88,9 @@ module.exports = function (RED) {
                 ReturnCode = body.retCode;
                 if (ReturnCode === "20000") {
                     setConnected(true);
-                    AccessToken = body.accessToken;
-                    RefreshToken = body.refreshToken;
-                    UserCode = body.userCode;
+                    this.AccessToken = body.accessToken;
+                    this.RefreshToken = body.refreshToken;
+                    this.token = body.AccessToken;
 
                     NodeRed.log('Logged in with Access Token: ' + AccessToken.substr(0, AccessToken.length - 3) + '***');
                     resolve(body.accessToken);
@@ -129,9 +127,9 @@ module.exports = function (RED) {
             ReturnCode = body.retCode;
             if (ReturnCode === "20000") {
                 setConnected(true);
-                AccessToken = body.accessToken;
-                RefreshToken = body.refreshToken;
-                UserCode = body.userCode;
+                this.AccessToken = body.accessToken;
+                this.RefreshToken = body.refreshToken;
+                this.token = body.AccessToken;
                 NodeRed.log('Token refreshed.');
             } else if (ReturnCode === "20108") {
                 NodeRed.error('Not Authorized. Login again after Returncode: ' + ReturnCode);
