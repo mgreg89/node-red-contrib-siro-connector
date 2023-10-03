@@ -20,8 +20,7 @@ module.exports = function (RED) {
         })
     }
 
-    controlDevice = function (operation, targetPosition, mac, deviceType, nodeID) {
-        // console.log("controlDevice", operation, targetPosition, mac, deviceType, server);
+    controlDevice = function (operation, targetPosition, mac, deviceType) {
         let sendData_obj;
         if (operation !== undefined) {
             sendData_obj = {
@@ -29,7 +28,7 @@ module.exports = function (RED) {
                 mac: mac,
                 deviceType: deviceType,
                 AccessToken: acc.generateAcc(server.token, server.key),
-                msgID: Date.now() + '' + nodeID,
+                msgID: Date.now(),
                 data: {
                     operation: operation
                 }
@@ -41,7 +40,7 @@ module.exports = function (RED) {
                 mac: mac,
                 deviceType: deviceType,
                 AccessToken: acc.generateAcc(server.token, server.key),
-                msgID: Date.now() + '' + nodeID,
+                msgID: Date.now(),
                 data: {
                     targetPosition: targetPosition
                 }
@@ -54,7 +53,6 @@ module.exports = function (RED) {
     function ControlBlindNode(config) {
         RED.nodes.createNode(this, config);
 
-        let nodeID = uuid.generateUUID().substring(0, 6);
         let lastMsgID;
 
         // Retrieve the config node
@@ -133,7 +131,7 @@ module.exports = function (RED) {
             if (TempTargetPosition != undefined) {
                 operation = undefined;
             }
-            controlDevice(operation, TempTargetPosition, device.mac, device.type, nodeID);
+            controlDevice(operation, TempTargetPosition, device.mac, device.type);
         });
 
         server.client.on('message', (msg, rinfo) => {
@@ -141,8 +139,6 @@ module.exports = function (RED) {
             let device = JSON.parse(config.device);
             if (obj.msgType === "WriteDeviceAck"
                 && obj.mac == device.mac
-                && obj.msgID
-                && obj.msgID.endsWith(nodeID)
                 && (!lastMsgID || lastMsgID < obj.msgID)) {
                 lastMsgID = obj.msgID;
                 node.send(obj);

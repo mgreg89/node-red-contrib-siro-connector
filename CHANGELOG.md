@@ -1,3 +1,7 @@
+# 1.2.9
+## Fixes
+* missing output of control blind #3
+  
 # 1.2.8
 ## Fixes
 * axios dep sec vulnerability
