@@ -4,17 +4,14 @@ module.exports = function (RED) {
     const uuid = require('./lib/uuid');
     const dgram = require('dgram');
 
-    let key = "";
-    var token;
-
     var schedule = require('node-schedule');
-    let connected = null;
+    var connected = null;
     var AccessToken;
     var RefreshToken;
-    let SheduleToken;
-    let ApiURL;
-    let NodeRed;
-    let client;
+    var SheduleToken;
+    var ApiURL;
+    var NodeRed;
+    var client;
 
     function ConnectorConfigNode(n) {
         NodeRed = this;
@@ -26,18 +23,16 @@ module.exports = function (RED) {
         ApiURL = this.host + ':' + this.port;
         this.user = n.user;
         this.pw = n.pw;
-        login().then((token) => {
-            this.AccessToken = token;
-        });
-        this.AccessToken = '';
-      
+        this.token;
+        login();
+
         client = dgram.createSocket('udp4');
 
         client.bind(32101, function () {
             client.addMembership('238.0.0.18');
         })
 
-        this.on('close', function(done) {
+        this.on('close', function (done) {
             client.close(done());
         });
 
@@ -60,7 +55,7 @@ module.exports = function (RED) {
 
         client.on('message', (msg, rinfo) => {
             let obj = JSON.parse(msg.toString());
-            if(obj && obj.token && !this.token) {
+            if (obj && obj.token && !this.token) {
                 this.token = obj.token;
             }
             NodeRed.log("new incoming message", obj, rinfo);
@@ -92,7 +87,7 @@ module.exports = function (RED) {
                     setConnected(true);
                     AccessToken = body.accessToken;
                     RefreshToken = body.refreshToken;
-                    UserCode = body.userCode;
+                    this.token = body.AccessToken;
 
                     NodeRed.log('Logged in with Access Token: ' + AccessToken.substr(0, AccessToken.length - 3) + '***');
                     resolve(body.accessToken);
@@ -129,9 +124,9 @@ module.exports = function (RED) {
             ReturnCode = body.retCode;
             if (ReturnCode === "20000") {
                 setConnected(true);
-                AccessToken = body.accessToken;
-                RefreshToken = body.refreshToken;
-                UserCode = body.userCode;
+                this.AccessToken = body.accessToken;
+                this.RefreshToken = body.refreshToken;
+                this.token = body.AccessToken;
                 NodeRed.log('Token refreshed.');
             } else if (ReturnCode === "20108") {
                 NodeRed.error('Not Authorized. Login again after Returncode: ' + ReturnCode);
@@ -161,7 +156,7 @@ module.exports = function (RED) {
     function getDeviceList() {
         let sendData_obj = {
             msgType: "GetDeviceList",
-            msgID: Date.now()+''+''
+            msgID: Date.now() + '' + ''
         }
         let sendData = JSON.stringify(sendData_obj);
         client.send(sendData, 32100, '238.0.0.18', function (error) {
@@ -182,8 +177,8 @@ module.exports = function (RED) {
                 json: true
             }, function (err, httpResponse, body) {
                 if (err) {
-                    setConnected(false);
                     NodeRed.error('Read Devices failed!');
+                    setConnected(false);
                     reject('Read Devices failed!');
                     RED.notify("Read Devices failed. Please retry.", "error");
                 }

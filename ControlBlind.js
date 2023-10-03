@@ -11,11 +11,9 @@ module.exports = function (RED) {
     });
 
     sendData = function (data) {
-        //console.log("send：" + data);
         server.client.send(data, 32100, '238.0.0.18', function (error) {
-            console.log("potential error", error);
             if (error) {
-                console.log("send failed:" + error);
+                console.log("send failed:", error);
             }
         })
     }
@@ -46,8 +44,8 @@ module.exports = function (RED) {
                 }
             }
         }
+
         sendData(JSON.stringify(sendData_obj));
-        // setTimeout(() => { sendData(JSON.stringify(sendData_obj)) }, 200);
     }
 
     function ControlBlindNode(config) {
@@ -57,7 +55,6 @@ module.exports = function (RED) {
 
         // Retrieve the config node
         server = RED.nodes.getNode(config.server);
-        // console.log("got server", RED.nodes.getNode(config.server), config);
         if (!server) {
             // No config node configured
             this.error("Control Blinds - No API connection was configured. Please add a Connection to this node.");
